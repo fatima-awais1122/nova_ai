@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'core/theme/app_theme.dart';
+
 void main() {
   runApp(const NovaAI());
 }
@@ -12,10 +14,12 @@ class NovaAI extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Nova AI',
-
-      theme: ThemeData(useMaterial3: true),
-
-      home: const Scaffold(body: Center(child: Text("Welcome to Nova AI 🚀"))),
+      theme: AppTheme.darkTheme,
+      home: const Scaffold(
+        body: Center(
+          child: Text('Welcome to Nova AI 🚀', style: TextStyle(fontSize: 24)),
+        ),
+      ),
     );
   }
 }
