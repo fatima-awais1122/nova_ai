@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
+import 'features/splash/screens/splash_screen.dart';
 
 void main() {
-  runApp(const NovaAI());
+  runApp(const ProviderScope(child: NovaAI()));
 }
 
 class NovaAI extends StatelessWidget {
@@ -13,13 +15,9 @@ class NovaAI extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Nova AI',
+      title: "Nova AI",
       theme: AppTheme.darkTheme,
-      home: const Scaffold(
-        body: Center(
-          child: Text('Welcome to Nova AI 🚀', style: TextStyle(fontSize: 24)),
-        ),
-      ),
+      home: const SplashScreen(),
     );
   }
 }
