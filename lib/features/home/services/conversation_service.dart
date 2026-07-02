@@ -19,4 +19,18 @@ class ConversationService {
 
     return response.data["conversation"];
   }
+
+  Future<void> deleteConversation(String id) async {
+    await DioClient.dio.delete("${ApiConstants.conversations}/$id");
+  }
+
+  Future<void> renameConversation({
+    required String id,
+    required String title,
+  }) async {
+    await DioClient.dio.patch(
+      "${ApiConstants.conversations}/$id",
+      data: {"title": title},
+    );
+  }
 }

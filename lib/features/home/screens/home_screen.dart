@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../chat/screens/chat_screen.dart';
 import '../models/conversation_model.dart';
 import '../services/conversation_service.dart';
 import '../widgets/conversation_tile.dart';
-import '../../chat/screens/chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,6 +61,77 @@ class _HomeScreenState extends State<HomeScreen> {
     loadConversations();
   }
 
+  Future<void> deleteConversation(ConversationModel conversation) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Delete Conversation"),
+        content: const Text(
+          "Are you sure you want to delete this conversation?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, false);
+            },
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+            },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await _conversationService.deleteConversation(conversation.id);
+
+    loadConversations();
+  }
+
+  Future<void> renameConversation(ConversationModel conversation) async {
+    final controller = TextEditingController(text: conversation.title);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Rename Conversation"),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: "Conversation title"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, controller.text.trim());
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || result.isEmpty) return;
+
+    await _conversationService.renameConversation(
+      id: conversation.id,
+      title: result,
+    );
+
+    loadConversations();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,21 +163,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? ListView(
                       children: const [
                         SizedBox(height: 250),
-
                         Center(
                           child: Text(
                             "No Conversations Yet",
                             style: TextStyle(color: Colors.white, fontSize: 18),
                           ),
                         ),
-
-                        SizedBox(height: 10),
-
+                        SizedBox(height: 12),
                         Center(
                           child: Text(
-                            "Tap 'New Chat' to start talking with Nova AI",
-                            style: TextStyle(color: Colors.grey),
+                            "Tap New Chat to start talking with Nova AI",
                             textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey),
                           ),
                         ),
                       ],
@@ -120,6 +188,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           title: conversation.title,
                           onTap: () =>
                               openChat(conversationId: conversation.id),
+                          onRename: () => renameConversation(conversation),
+                          onDelete: () => deleteConversation(conversation),
                         );
                       },
                     ),

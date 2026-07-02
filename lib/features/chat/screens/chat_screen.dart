@@ -21,6 +21,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   final TextEditingController controller = TextEditingController();
 
+  final ScrollController scrollController = ScrollController();
+
   final List<MessageModel> messages = [];
 
   bool loading = false;
@@ -38,6 +40,18 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!scrollController.hasClients) return;
+
+      scrollController.animateTo(
+        scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
   Future<void> loadMessages() async {
     try {
       final response = await _messageService.getMessages(conversationId!);
@@ -49,6 +63,8 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       setState(() {});
+
+      scrollToBottom();
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -74,6 +90,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     controller.clear();
 
+    scrollToBottom();
+
     try {
       final response = await _chatService.sendMessage(
         conversationId: conversationId,
@@ -96,20 +114,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
         loading = false;
       });
+
+      scrollToBottom();
     } catch (e) {
       setState(() {
         loading = false;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     }
   }
 
   @override
   void dispose() {
     controller.dispose();
+    scrollController.dispose();
     super.dispose();
   }
 
@@ -124,6 +147,7 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: ListView.builder(
+              controller: scrollController,
               padding: const EdgeInsets.symmetric(vertical: 12),
               itemCount: messages.length,
               itemBuilder: (_, index) {
@@ -139,8 +163,25 @@ class _ChatScreenState extends State<ChatScreen> {
 
           if (loading)
             const Padding(
-              padding: EdgeInsets.all(12),
-              child: CircularProgressIndicator(),
+              padding: EdgeInsets.all(10),
+              child: Row(
+                children: [
+                  SizedBox(width: 12),
+
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: AppColors.primary,
+                    child: Icon(Icons.smart_toy, color: Colors.white, size: 15),
+                  ),
+
+                  SizedBox(width: 10),
+
+                  Text(
+                    "Nova AI is typing...",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
             ),
 
           SafeArea(
