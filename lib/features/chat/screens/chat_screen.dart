@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../models/message_model.dart';
 import '../services/chat_service.dart';
+import '../services/message_service.dart';
 import '../widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -15,10 +17,11 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final ChatService _chatService = ChatService();
+  final MessageService _messageService = MessageService();
 
   final TextEditingController controller = TextEditingController();
 
-  final List<Map<String, dynamic>> messages = [];
+  final List<MessageModel> messages = [];
 
   bool loading = false;
 
@@ -27,7 +30,28 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+
     conversationId = widget.conversationId;
+
+    if (conversationId != null) {
+      loadMessages();
+    }
+  }
+
+  Future<void> loadMessages() async {
+    try {
+      final response = await _messageService.getMessages(conversationId!);
+
+      messages.clear();
+
+      messages.addAll(
+        response.map<MessageModel>((e) => MessageModel.fromJson(e)).toList(),
+      );
+
+      setState(() {});
+    } catch (e) {
+      debugPrint(e.toString());
+    }
   }
 
   Future<void> sendMessage() async {
@@ -36,7 +60,14 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = controller.text.trim();
 
     setState(() {
-      messages.add({"role": "user", "content": text});
+      messages.add(
+        MessageModel(
+          id: "",
+          role: "user",
+          content: text,
+          createdAt: DateTime.now(),
+        ),
+      );
 
       loading = true;
     });
@@ -54,10 +85,14 @@ class _ChatScreenState extends State<ChatScreen> {
       conversationId = data["conversationId"];
 
       setState(() {
-        messages.add({
-          "role": "assistant",
-          "content": data["assistantMessage"]["content"],
-        });
+        messages.add(
+          MessageModel(
+            id: data["assistantMessage"]["id"],
+            role: "assistant",
+            content: data["assistantMessage"]["content"],
+            createdAt: DateTime.parse(data["assistantMessage"]["createdAt"]),
+          ),
+        );
 
         loading = false;
       });
@@ -73,6 +108,12 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -83,13 +124,14 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 12),
               itemCount: messages.length,
               itemBuilder: (_, index) {
                 final msg = messages[index];
 
                 return MessageBubble(
-                  message: msg["content"],
-                  isUser: msg["role"] == "user",
+                  message: msg.content,
+                  isUser: msg.role == "user",
                 );
               },
             ),
@@ -97,7 +139,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
           if (loading)
             const Padding(
-              padding: EdgeInsets.all(10),
+              padding: EdgeInsets.all(12),
               child: CircularProgressIndicator(),
             ),
 
@@ -109,6 +151,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: controller,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => sendMessage(),
                       decoration: InputDecoration(
                         hintText: "Ask Nova AI...",
                         filled: true,
@@ -124,7 +168,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(width: 10),
 
                   IconButton(
-                    onPressed: sendMessage,
+                    onPressed: loading ? null : sendMessage,
                     icon: const Icon(Icons.send, color: AppColors.primary),
                   ),
                 ],

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../chat/screens/chat_screen.dart';
-import '../services/conversation_service.dart';
 import '../models/conversation_model.dart';
+import '../services/conversation_service.dart';
 import '../widgets/conversation_tile.dart';
+import '../../chat/screens/chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,7 +14,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ConversationService _service = ConversationService();
+  final ConversationService _conversationService = ConversationService();
 
   List<ConversationModel> conversations = [];
 
@@ -28,10 +28,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> loadConversations() async {
     try {
-      final response = await _service.getConversations();
+      setState(() {
+        loading = true;
+      });
+
+      final response = await _conversationService.getConversations();
 
       conversations = response
-          .map((e) => ConversationModel.fromJson(e))
+          .map<ConversationModel>((e) => ConversationModel.fromJson(e))
           .toList();
 
       setState(() {
@@ -41,7 +45,20 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         loading = false;
       });
+
+      debugPrint(e.toString());
     }
+  }
+
+  Future<void> openChat({String? conversationId}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(conversationId: conversationId),
+      ),
+    );
+
+    loadConversations();
   }
 
   @override
@@ -49,52 +66,63 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
 
-      appBar: AppBar(title: const Text("Nova AI")),
+      appBar: AppBar(
+        title: const Text("Nova AI"),
+        actions: [
+          IconButton(
+            onPressed: loadConversations,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
 
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ChatScreen()),
-          );
-
-          loadConversations();
-        },
+        onPressed: () => openChat(),
         icon: const Icon(Icons.add),
         label: const Text("New Chat"),
       ),
 
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : conversations.isEmpty
-          ? const Center(
-              child: Text(
-                "No Conversations Yet",
-                style: TextStyle(color: Colors.white),
-              ),
-            )
-          : ListView.builder(
-              itemCount: conversations.length,
-              itemBuilder: (_, index) {
-                final conversation = conversations[index];
+          : RefreshIndicator(
+              onRefresh: loadConversations,
+              child: conversations.isEmpty
+                  ? ListView(
+                      children: const [
+                        SizedBox(height: 250),
 
-                return ConversationTile(
-                  title: conversation.title,
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ChatScreen(conversationId: conversation.id),
-                      ),
-                    );
+                        Center(
+                          child: Text(
+                            "No Conversations Yet",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                        ),
 
-                    loadConversations();
-                  },
-                );
-              },
+                        SizedBox(height: 10),
+
+                        Center(
+                          child: Text(
+                            "Tap 'New Chat' to start talking with Nova AI",
+                            style: TextStyle(color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      itemCount: conversations.length,
+                      itemBuilder: (_, index) {
+                        final conversation = conversations[index];
+
+                        return ConversationTile(
+                          title: conversation.title,
+                          onTap: () =>
+                              openChat(conversationId: conversation.id),
+                        );
+                      },
+                    ),
             ),
     );
   }
